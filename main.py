@@ -1,8 +1,20 @@
 import curses
+
 from typing import Callable
 from _curses import window
 
 pieces = ["o", "x"]
+
+controls = {
+    "place": ["p", " "],
+    "left": ["KEY_LEFT", "h"],
+    "right": ["KEY_RIGHT", "l"],
+    "up": ["KEY_UP", "k"],
+    "down": ["KEY_DOWN", "j"],
+    "reset": ["r"],
+    "quit": ["q"],
+}
+
 
 def has_won(board: list[str], player: int, x: int, y: int) -> bool:
     line = pieces[player] * 5
@@ -39,14 +51,11 @@ def draw_board(scr: window, board: list[str], message: str) -> None:
 
 
 def board_to_screen_pos(x: int, y: int) -> tuple[int, int]:
-    return (
-        y + 1,
-        (x + 1) * 2,
-    )
+    return (y + 1, (x + 1) * 2)
 
 
 # Remake of curses.wrapper to remove color and hide cursor
-def wrapper(func: Callable[[window],None]) -> None:
+def wrapper(func: Callable[[window], None]) -> None:
     try:
         stdscr = curses.initscr()
         curses.noecho()
@@ -66,26 +75,19 @@ def wrapper(func: Callable[[window],None]) -> None:
             curses.endwin()
 
 
-controls = {
-    "reset": ["r"],
-    "place": ["p"],
-    "quit": ["q", "KEY_ESCAPE"],
-    "left": ["KEY_LEFT", "h"],
-    "right": ["KEY_RIGHT", "l"],
-    "up": ["KEY_UP", "k"],
-    "down": ["KEY_DOWN", "j"],
-}
-
-
 def main(stdscr: window) -> None:
     board = [" " * 15] * 15
     player = 0
     x = 7
     y = 7
     completed = False
-
+    # Play through the game until reset or quit
     while True:
-        message = f"{pieces[player]} won!" if completed else f"{pieces[player]}'s turn to play" 
+        message = (
+            f"{pieces[player]} won!"
+            if completed
+            else f"{pieces[player]}'s turn to play"
+        )
         draw_board(stdscr, board, message)
         stdscr.addch(*board_to_screen_pos(x, y), board[y][x], curses.A_REVERSE)
         key = stdscr.getkey()
@@ -98,10 +100,10 @@ def main(stdscr: window) -> None:
                     completed = True
                 else:
                     player = abs(player - 1)
-            elif key in controls["right"]:
-                x = min(x + 1, 14)
             elif key in controls["left"]:
                 x = max(x - 1, 0)
+            elif key in controls["right"]:
+                x = min(x + 1, 14)
             elif key in controls["up"]:
                 y = max(y - 1, 0)
             elif key in controls["down"]:
@@ -113,5 +115,6 @@ def main(stdscr: window) -> None:
 
 
 if __name__ == "__main__":
+    # When reset simply rerun main
     while True:
         wrapper(main)
