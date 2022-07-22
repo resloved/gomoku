@@ -1,33 +1,34 @@
 import curses
+from typing import Callable
+from _curses import window
 
 pieces = ["o", "x"]
 
-logging_idx = 25
-
-def has_won(board, player, x, y):
+def has_won(board: list[str], player: int, x: int, y: int) -> bool:
     line = pieces[player] * 5
 
     directions = [
         board[y],  # Horizontal
         "".join([row[x] for row in board]),  # Vertical
         "",  # NW -> SE Diagonal
-        "",
+        "",  # SW -> NE Diagonal
     ]
 
     for i, row in enumerate(board):
         try:
             directions[2] += row[y - x + i]
-        except:
+        except IndexError:
             pass
         try:
             directions[3] += row[y + x - i]
-        except:
+        except IndexError:
             pass
 
     return any(line in direction for direction in directions)
 
 
-def draw_board(scr, board, message):
+def draw_board(scr: window, board: list[str], message: str) -> None:
+    scr.clear()
     scr.addstr(0, 0, f"+-------------------------------+")
     for i, row in enumerate(board):
         v = " ".join(list(row))
@@ -37,14 +38,15 @@ def draw_board(scr, board, message):
     scr.addstr(i + 6, 0, "(p)lace (r)eset (q)uit")
 
 
-def board_to_screen_pos(x, y):
+def board_to_screen_pos(x: int, y: int) -> tuple[int, int]:
     return (
         y + 1,
         (x + 1) * 2,
     )
 
 
-def wrapper(func, *args, **kwds):
+# Remake of curses.wrapper to remove color and hide cursor
+def wrapper(func: Callable[[window],None]) -> None:
     try:
         stdscr = curses.initscr()
         curses.noecho()
@@ -55,7 +57,7 @@ def wrapper(func, *args, **kwds):
             curses.curs_set(0)
         except:
             pass
-        return func(stdscr, *args, **kwds)
+        return func(stdscr)
     finally:
         if "stdscr" in locals():
             stdscr.keypad(0)
@@ -75,7 +77,7 @@ controls = {
 }
 
 
-def main(stdscr):
+def main(stdscr: window) -> None:
     board = [" " * 15] * 15
     player = 0
     x = 7
@@ -83,7 +85,7 @@ def main(stdscr):
     completed = False
 
     while True:
-        message = f"{pieces[player]}'s turn to play"
+        message = f"{pieces[player]} won!" if completed else f"{pieces[player]}'s turn to play" 
         draw_board(stdscr, board, message)
         stdscr.addch(*board_to_screen_pos(x, y), board[y][x], curses.A_REVERSE)
         key = stdscr.getkey()
